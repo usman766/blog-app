@@ -13,7 +13,7 @@ This is a Laravel-based Blog API that allows users to create, update, delete, an
 
 1. Clone the repository:
    ```sh
-   git clone https://github.com/your-repo.git
+   git clone https://github.com/usman766/blog-app
    cd your-repo
    ```
 
