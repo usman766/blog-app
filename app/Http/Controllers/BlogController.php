@@ -27,7 +27,7 @@ class BlogController extends Controller
         try {
 
             $blog = $this->blogService->createBlog(data: $request->validated());
-            // event(new BlogCreated($blog));
+            event(new BlogCreated($blog));
             return jsonResponse(
                 message: __('messages.blog.created'),
                 data: new BlogResource($blog),
@@ -100,6 +100,13 @@ class BlogController extends Controller
     public function update(Request $request, Blog $blog): JsonResponse
     {
         try {
+            if($blog->user_id !== auth()->id()) {
+                return jsonResponse(
+                    message: __('messages.blog.unauthorized'),
+                    statusCode: 403
+                );
+            }
+
             $blog = $this->blogService->updateBlog(blog: $blog, data: $request->all());
             return jsonResponse(
                 message: __('messages.blog.updated'),
@@ -123,6 +130,14 @@ class BlogController extends Controller
     public function destroy(Blog $blog): JsonResponse
     {
         try {
+
+            if($blog->user_id !== auth()->id()) {
+                return jsonResponse(
+                    message: __('messages.blog.unauthorized'),
+                    statusCode: 403
+                );
+            }
+
             $this->blogService->deleteBlog(blog: $blog);
             return jsonResponse(
                 message: __('messages.blog.deleted'),
@@ -145,6 +160,14 @@ class BlogController extends Controller
     public function forceDelete(Blog $blog): JsonResponse
     {
         try {
+
+            if($blog->user_id !== auth()->id()) {
+                return jsonResponse(
+                    message: __('messages.blog.unauthorized'),
+                    statusCode: 403
+                );
+            }
+            
             $this->blogService->forceDeleteBlog(blog: $blog);
             return jsonResponse(
                 message: __('messages.blog.permanently_deleted'),
@@ -167,6 +190,14 @@ class BlogController extends Controller
     public function restore(int $blogID): JsonResponse
     {
         try {
+
+            if($blog->user_id !== auth()->id()) {
+                return jsonResponse(
+                    message: __('messages.blog.unauthorized'),
+                    statusCode: 403
+                );
+            }
+
             $blog = Blog::onlyTrashed()->findOrFail(id: $blogID);
             $this->blogService->restoreBlog(blog: $blog);
             return jsonResponse(
