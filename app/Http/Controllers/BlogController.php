@@ -7,10 +7,10 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use App\Http\Requests\StoreBlogRequest;
 use App\Services\BlogService;
 use App\Models\Blog;
-use App\Http\Controllers\Controller;
 use App\Http\Resources\BlogResource;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Exception;
 
 class BlogController extends Controller
@@ -19,196 +19,113 @@ class BlogController extends Controller
 
     /**
      * Store a newly created blog in storage.
-     *
      * @param StoreBlogRequest $request
+     * @return JsonResponse
      */
     public function store(StoreBlogRequest $request): JsonResponse
     {
-        try {
+        return handleRequest(function () use ($request) {
+            $blog = $this->blogService->createBlog($request->validated());
 
-            $blog = $this->blogService->createBlog(data: $request->validated());
             event(new BlogCreated($blog));
-            return jsonResponse(
-                message: __('messages.blog.created'),
-                data: new BlogResource($blog),
-                statusCode: 201
-            );
-        } catch (Exception $e) {
-            return jsonResponse(
-                message: __('messages.blog.create_failed', ['error' => $e->getMessage()]),
-                statusCode: 500
-            );
-        }
+
+            return jsonResponse(__('messages.blog.created'), new BlogResource($blog), 201);
+        });
     }
 
     /**
      * Display a listing of blogs.
-     *
+     * @param Request $request
      * @return JsonResponse|AnonymousResourceCollection
      */
     public function index(Request $request): JsonResponse|AnonymousResourceCollection
     {
-        try {
-            $perPage = $request->get(key: 'per_page', default: 10);
-            $blogs = $this->blogService->getAllBlogs(perPage: $perPage);
-            return BlogResource::collection(resource: $blogs);
-        } catch (Exception $e) {
-            return jsonResponse(
-                message: __('messages.blog.retrieve_failed', ['error' => $e->getMessage()]),
-                statusCode: 500
-            );
-        }
+        return handleRequest(function () use ($request) {
+            $perPage = $request->get('per_page', 10);
+            $blogs = $this->blogService->getAllBlogs($perPage);
+
+            return BlogResource::collection($blogs);
+        });
     }
 
     /**
      * Display the specified blog.
-     *
      * @param Blog $blog
      * @return JsonResponse
      */
     public function show(Blog $blog): JsonResponse
     {
-        try {
+        return handleRequest(function () use ($blog) {
+            Gate::authorize('view', $blog);
 
-            if($blog->user_id !== auth()->id()) {
-                return jsonResponse(
-                    message: __('messages.blog.unauthorized'),
-                    statusCode: 403
-                );
-            }
-
-            return jsonResponse(
-                message: __('messages.blog.retrieved'),
-                data: new BlogResource($blog),
-                statusCode: 200
-            );
-        } catch (Exception $e) {
-            return jsonResponse(
-                message: __('messages.blog.retrieve_failed', ['error' => $e->getMessage()]),
-                statusCode: 500
-            );
-        }
+            return jsonResponse(__('messages.blog.retrieved'), new BlogResource($blog));
+        });
     }
 
     /**
-     * Update the specified blog in storage.
-     *
+     * Update the specified blog.
      * @param Request $request
      * @param Blog $blog
      * @return JsonResponse
      */
     public function update(Request $request, Blog $blog): JsonResponse
     {
-        try {
-            if($blog->user_id !== auth()->id()) {
-                return jsonResponse(
-                    message: __('messages.blog.unauthorized'),
-                    statusCode: 403
-                );
-            }
+        return handleRequest(function () use ($request, $blog) {
+            Gate::authorize('update', $blog);
 
-            $blog = $this->blogService->updateBlog(blog: $blog, data: $request->all());
-            return jsonResponse(
-                message: __('messages.blog.updated'),
-                data: new BlogResource($blog),
-                statusCode: 200
-            );
-        } catch (Exception $e) {
-            return jsonResponse(
-                message: __('messages.blog.update_failed', ['error' => $e->getMessage()]),
-                statusCode: 500
-            );
-        }
+            $blog = $this->blogService->updateBlog($blog, $request->all());
+
+            return jsonResponse(__('messages.blog.updated'), new BlogResource($blog));
+        });
     }
 
     /**
-     * Remove the specified blog from storage.
-     *
+     * Remove the specified blog.
      * @param Blog $blog
      * @return JsonResponse
      */
     public function destroy(Blog $blog): JsonResponse
     {
-        try {
+        return handleRequest(function () use ($blog) {
+            Gate::authorize('delete', $blog);
 
-            if($blog->user_id !== auth()->id()) {
-                return jsonResponse(
-                    message: __('messages.blog.unauthorized'),
-                    statusCode: 403
-                );
-            }
+            $this->blogService->deleteBlog($blog);
 
-            $this->blogService->deleteBlog(blog: $blog);
-            return jsonResponse(
-                message: __('messages.blog.deleted'),
-                statusCode: 200
-            );
-        } catch (Exception $e) {
-            return jsonResponse(
-                message: __('messages.blog.delete_failed', ['error' => $e->getMessage()]),
-                statusCode: 500
-            );
-        }
+            return jsonResponse(__('messages.blog.deleted'));
+        });
     }
 
     /**
      * Force delete a blog.
-     *
      * @param Blog $blog
      * @return JsonResponse
      */
     public function forceDelete(Blog $blog): JsonResponse
     {
-        try {
+        return handleRequest(function () use ($blog) {
+            Gate::authorize('forceDelete', $blog);
 
-            if($blog->user_id !== auth()->id()) {
-                return jsonResponse(
-                    message: __('messages.blog.unauthorized'),
-                    statusCode: 403
-                );
-            }
-            
-            $this->blogService->forceDeleteBlog(blog: $blog);
-            return jsonResponse(
-                message: __('messages.blog.permanently_deleted'),
-                statusCode: 200
-            );
-        } catch (Exception $e) {
-            return jsonResponse(
-                message: __('messages.blog.delete_failed', ['error' => $e->getMessage()]),
-                statusCode: 500
-            );
-        }
+            $this->blogService->forceDeleteBlog($blog);
+
+            return jsonResponse(__('messages.blog.permanently_deleted'));
+        });
     }
 
     /**
      * Restore a soft-deleted blog.
-     *
      * @param int $blogID
      * @return JsonResponse
      */
     public function restore(int $blogID): JsonResponse
     {
-        try {
+        return handleRequest(function () use ($blogID) {
+            $blog = Blog::onlyTrashed()->findOrFail($blogID);
 
-            if($blog->user_id !== auth()->id()) {
-                return jsonResponse(
-                    message: __('messages.blog.unauthorized'),
-                    statusCode: 403
-                );
-            }
+            Gate::authorize('restore', $blog);
 
-            $blog = Blog::onlyTrashed()->findOrFail(id: $blogID);
-            $this->blogService->restoreBlog(blog: $blog);
-            return jsonResponse(
-                message: __('messages.blog.restored'),
-                statusCode: 200
-            );
-        } catch (Exception $e) {
-            return jsonResponse(
-                message: __('messages.blog.restore_failed', ['error' => $e->getMessage()]),
-                statusCode: 500
-            );
-        }
+            $this->blogService->restoreBlog($blog);
+
+            return jsonResponse(__('messages.blog.restored'));
+        });
     }
 }

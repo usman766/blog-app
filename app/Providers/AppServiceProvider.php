@@ -2,8 +2,11 @@
 
 namespace App\Providers;
 
+use App\Models\Blog;
 use Illuminate\Support\ServiceProvider;
 use Laravel\Passport\Passport;
+use Illuminate\Support\Facades\Gate;
+use App\Policies\BlogPolicy;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -21,6 +24,8 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Passport::loadKeysFrom(storage_path());
+        Gate::policy(Blog::class, BlogPolicy::class);
+
 
     }
 }

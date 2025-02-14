@@ -15,6 +15,7 @@ return [
         'restore_failed' => 'Failed to restore blog: :error',
         'restored' => 'Blog restored successfully.',
         'blog_create_success' => 'Blog created successfully.',    
+        'error' => 'An error occurred: :error',
     ],
 
     
